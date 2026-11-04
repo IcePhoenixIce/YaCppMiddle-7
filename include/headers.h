@@ -1,13 +1,18 @@
 #pragma once
 
-#include <string>
 #include <functional>
 #include <optional>
+#include <string>
 
 using Callback = std::function<void(std::string_view, std::string_view)>;
 
-void iterHeaders(std::string_view req, Callback&& callback);
+struct HostPort {
+    std::string host;
+    std::string port;
+};
 
-std::pair<std::string, std::string> findHostPort(std::string_view req);
+void iterHeaders(std::string_view req, Callback &&callback);
+
+HostPort findHostPort(std::string_view req);
 
 std::optional<size_t> findContentLength(std::string_view rsp);
