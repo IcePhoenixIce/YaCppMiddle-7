@@ -73,13 +73,16 @@ awaitable<void> session(tcp::socket client_socket, io_service &io_service) {
                 co_await async_write(client_socket, buffer(server_buf.data() + m, already_read), use_awaitable);
             }
 
-            // Затем дочитываем оставшуюся часть тела с сервера
+            // Затем дочитываем оставшуюся часть тела с сервера чанками, чтобы избежать OOM
             size_t remaining = body_size - already_read;
-            if (remaining > 0) {
-                std::string body(remaining, '\0');
-                co_await async_read(server_socket, buffer(body.data(), remaining), transfer_at_least(remaining),
+            constexpr size_t chunk_size = 8192;
+            while (remaining > 0) {
+                size_t to_read = std::min(chunk_size, remaining);
+                std::string chunk(to_read, '\0');
+                co_await async_read(server_socket, buffer(chunk.data(), to_read), transfer_at_least(to_read),
                                     use_awaitable);
-                co_await async_write(client_socket, buffer(body), use_awaitable);
+                co_await async_write(client_socket, buffer(chunk), use_awaitable);
+                remaining -= to_read;
             }
         }
 
